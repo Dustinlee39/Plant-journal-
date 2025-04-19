@@ -1,0 +1,349 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChronoGarden – Plant Journal</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      padding: 10px;
+    }
+    body.dark-mode {
+      background: #1e1e1e;
+      color: #e0e0e0;
+    }
+    header {
+      text-align: center;
+      padding: 20px 10px;
+      background: linear-gradient(to right, #74b49b, #a7d7c5);
+      color: white;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    header h1 { font-size: 1.8em; margin-bottom: 5px; }
+    header p { font-size: 1em; color: #e0ffe9; }
+    .theme-toggle {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+    }
+    .theme-toggle button {
+      padding: 8px 12px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+    .section {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      padding: 15px;
+    }
+    body.dark-mode .section { background: #2b2b2b; }
+    .section h2 { font-size: 1.4em; margin-bottom: 10px; color: #4a7c59; }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="date"], textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-top: 4px;
+    }
+    input[type="file"] { margin-top: 8px; }
+    button.submit-btn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #4a7c59;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    .entry-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .entry {
+      border-left: 4px solid #4a7c59;
+      padding: 10px 15px;
+      background: #fafafa;
+      border-radius: 6px;
+    }
+    body.dark-mode .entry {
+      background: #333;
+      color: #ccc;
+    }
+    .entry img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+    .entry-time {
+      font-size: 0.9em;
+      color: #888;
+      margin-bottom: 5px;
+    }
+    .filter-section {
+      margin-bottom: 20px;
+    }
+    .filter-section select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #aaa;
+      border-radius: 6px;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .gallery-grid img {
+      width: 100%;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+    .export-buttons button {
+      margin-right: 10px;
+      padding: 8px 12px;
+      background: #4a7c59;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .chart-section {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    canvas#careChart {
+      max-width: 100%;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="theme-toggle">
+      <button onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+    <h1>ChronoGarden</h1>
+    <p>Track your plants, care routines, and growth history</p>
+  </header>
+  <div class="container">
+    <div class="section">
+      <h2>Add New Plant Entry</h2>
+      <form id="plantForm">
+        <label for="plantName">Plant Name:</label>
+        <input type="text" id="plantName" required>
+        <label for="entryDate">Date:</label>
+        <input type="date" id="entryDate" required>
+        <label for="careNotes">Care Notes:</label>
+        <textarea id="careNotes" rows="3" placeholder="Watered, fertilized, trimmed..."></textarea>
+        <label for="photoUpload">Photo:</label>
+        <input type="file" id="photoUpload" accept="image/*">
+        <button type="submit" class="submit-btn">Save Entry</button>
+      </form>
+    </div>
+    <div class="section filter-section">
+      <h2>Filter by Plant</h2>
+      <select id="plantFilter">
+        <option value="all">Show All Plants</option>
+      </select>
+    </div>
+    <div class="section">
+      <h2>Plant Journal Timeline</h2>
+      <div class="entry-list" id="entryList"></div>
+    </div>
+    <div class="section export-buttons">
+      <h2>Export Journal</h2>
+      <button onclick="exportAsJSON()">Export as JSON</button>
+      <button onclick="exportAsText()">Export as Text</button>
+    </div>
+    <div class="section">
+      <h2>Photo Comparison Gallery</h2>
+      <div class="gallery-grid" id="photoGallery"></div>
+    </div>
+    <div class="section chart-section">
+      <h2>Care Activity Summary</h2>
+      <canvas id="careChart"></canvas>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById("plantForm");
+    const entryList = document.getElementById("entryList");
+    const filter = document.getElementById("plantFilter");
+    const photoInput = document.getElementById("photoUpload");
+    let entries = JSON.parse(localStorage.getItem("plantEntries") || "[]");
+
+    function saveEntries() {
+      localStorage.setItem("plantEntries", JSON.stringify(entries));
+    }
+
+    function updateFilterOptions() {
+      const uniquePlants = [...new Set(entries.map(e => e.name))];
+      filter.innerHTML = '<option value="all">Show All Plants</option>';
+      uniquePlants.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        filter.appendChild(opt);
+      });
+    }
+
+    function renderEntries() {
+      entryList.innerHTML = '';
+      const filtered = filter.value === "all" ? entries : entries.filter(e => e.name === filter.value);
+      filtered.reverse().forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "entry";
+        div.innerHTML = `<div class="entry-time">${entry.date} – <strong>${entry.name}</strong></div>
+                         <div>${entry.notes || "(No notes)"}</div>
+                         ${entry.photo ? `<img src="${entry.photo}" />` : ""}`;
+        entryList.appendChild(div);
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("plantName").value.trim();
+      const date = document.getElementById("entryDate").value;
+      const notes = document.getElementById("careNotes").value.trim();
+      const file = photoInput.files[0];
+
+      if (!name || !date) {
+        alert("Please fill in the plant name and date.");
+        return;
+      }
+
+      let photoBase64 = "";
+      if (file) {
+        try {
+          photoBase64 = await toBase64(file);
+        } catch (err) {
+          console.error("Error reading image file:", err);
+          alert("Failed to read image file.");
+          return;
+        }
+      }
+
+      const newEntry = { name, date, notes, photo: photoBase64 };
+      entries.push(newEntry);
+      saveEntries();
+      updateFilterOptions();
+      renderEntries();
+      renderGallery();
+      renderCareChart();
+      form.reset();
+    });
+
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderGallery() {
+      const gallery = document.getElementById("photoGallery");
+      gallery.innerHTML = '';
+      entries.forEach(e => {
+        if (e.photo) {
+          const img = document.createElement("img");
+          img.src = e.photo;
+          img.alt = e.name;
+          gallery.appendChild(img);
+        }
+      });
+    }
+
+    function exportAsJSON() {
+      if (!entries.length) return alert("No entries to export!");
+      const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "plant_journal.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportAsText() {
+      if (!entries.length) return alert("No entries to export!");
+      const text = entries.map(e => `Date: ${e.date}\nPlant: ${e.name}\nNotes: ${e.notes || "(No notes)"}\n`).join('\n---\n');
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "plant_journal.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    function renderCareChart() {
+      const dataMap = {};
+      entries.forEach(e => {
+        const name = e.name;
+        if (!dataMap[name]) dataMap[name] = 0;
+        dataMap[name] += 1;
+      });
+      const ctx = document.getElementById('careChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(dataMap),
+          datasets: [{
+            label: 'Entries Per Plant',
+            data: Object.values(dataMap),
+            backgroundColor: ['#74b49b', '#4a7c59', '#a7d7c5', '#6a994e', '#3e8e41', '#b5ead7', '#ffeaa7'],
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Total Care Logs per Plant' }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          }
+        }
+      });
+    }
+
+    updateFilterOptions();
+    renderEntries();
+    renderGallery();
+    renderCareChart();
+  </script>
+</body>
+</html>
